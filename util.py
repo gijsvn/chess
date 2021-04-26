@@ -15,6 +15,7 @@ def process_field(field):
     arr[np.where(field == "wKin")] = 100
     arr[np.where(field == "bKin")] = -100
     arr = arr.reshape((64,))
+    arr /= 100
     return arr
 
 def move_to_vector(old_pos, new_pos):

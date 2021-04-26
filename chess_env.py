@@ -250,6 +250,7 @@ def execute_move(field, old, new):
         piece = new_field[old]
         new_field[old] = "    "
         new_field[new] = piece
+        
     return new_field
 
 def clean_illegal_moves(field, player, moves):

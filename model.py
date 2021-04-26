@@ -9,6 +9,7 @@ from util import *
 def generate_random_game_data(total_games):
     training_data = {'X':[], 'y':[]}
     games_appended = 0
+    turns = []
     while games_appended < total_games:
         game_memory = {'X':[], 'y':[]}
 
@@ -43,7 +44,7 @@ def generate_random_game_data(total_games):
                             break
 
             game_memory['X'].append(process_field(field))
-            game_memory['y'].append(move_to_vector(piece, move))
+            game_memory['y'].append(turn)
 
             if player == 'w':
                 player = 'b'
@@ -57,13 +58,23 @@ def generate_random_game_data(total_games):
         if checkmate:
             if player == 'w':
                 winner = 'b'
+                training_data['X'] += game_memory['X']
+                training_data['y'] += list((np.array(game_memory['y'])/turn)*-1)
+                games_appended += 1
             else:
                 winner = 'w'
                 #if white won, append to training data
                 training_data['X'] += game_memory['X']
-                training_data['y'] += game_memory['y']
+                training_data['y'] += list(np.array(game_memory['y'])/turn)
                 games_appended += 1
-                print(f"{games_appended}/{total_games} training games", end = '\r')
+
+        turns.append(turn)
+        print(turn)
+    print(np.mean(turns))
+    input(np.std(turns))
+
+
+        #print(f"{games_appended}/{total_games} training games", end = '\r')
 
     print("")
     return training_data
@@ -76,16 +87,22 @@ def create_model(total_games, epochs):
     model.add(Dense(256, activation = "linear"))
     model.add(Dropout(.1))
     model.add(Dense(256, activation = "linear"))
-    model.add(Dense(64*64, activation = "softmax"))
+    model.add(Dropout(.1))
+    model.add(Dense(256, activation = "linear"))
+    model.add(Dropout(.1))
+    model.add(Dense(128, activation = "linear"))
+    model.add(Dropout(.1))
+    model.add(Dense(64, activation = "linear"))
+    model.add(Dense(1, activation = "tanh"))
 
-    model.compile(loss = 'categorical_crossentropy', optimizer = 'adam', metrics = ['accuracy'])
+    model.compile(loss = 'mean_squared_error', optimizer = 'adam')
 
     training_data = generate_random_game_data(total_games)
 
     model.fit(np.array(training_data["X"]), np.array(training_data["y"]), epochs = epochs)
     field = initialize_field()
     field = process_field(field)
-    model.save(f"./models/{total_games}_random_games-model")
+    model.save(f"./models/model_{total_games}_random_games")
 
 def test_model(model_name, total_games):
     model = load_model(f"{model_name}")
@@ -99,52 +116,56 @@ def test_model(model_name, total_games):
         checkmate = False
         draw = False
         player = 'w'
+        turn = 0
         while not checkmate and not draw:
+            print(turn, end = '\r')
+            if not turn%100:
+                print(field)
+            turn += 1
             initial_check = check_if_check(field, player)
 
             moves = get_possible_moves(field, player)
-
             while 1:
                 if player == 'w':
-                    processed = np.array([process_field(field)])
-                    prediction = model.predict(processed)[0]
-                    move_vector = np.zeros(len(prediction))
-                    move_vector[np.argmax(prediction)] = 1
-                    piece, move = vector_to_move(move_vector)
-                    t = 0
+                    best_move_score = -1
+                    for piece in moves.keys():
+                        for move in moves[piece]:
+                            #print(field)
+                            test_field = execute_move(field, piece, move)
+                            #input(field)
+                            if not check_if_check(test_field, player):
+                                network_input = np.array([process_field(test_field)])
+                                score = model.predict(network_input)[0][0]
+                                if score > best_move_score:
+                                    best_piece = piece
+                                    best_move = move
+                                    best_move_score = score
 
-                    while not move_in_moves(piece, move, moves):
-                        t += 1
-                        #print(t, end = '\r')
-                        #print("illegal move")
-                        prediction[np.argmax(prediction)] = -1
-                        move_vector = np.zeros(len(prediction))
-                        move_vector[np.argmax(prediction)] = 1
-                        piece, move = vector_to_move(move_vector)
-
-                    #print(t)
-
+                    piece, move = best_piece, best_move
                 else:
                     piece, move = pick_random_move(moves)
+                    test_field = execute_move(field, piece, move)
+                    while check_if_check(test_field, player):
+                        #potential move led to being checked
+                        moves[piece].remove(move)
+                        piece, move = pick_random_move(moves)
+                        test_field = execute_move(field, piece, move)
 
-                new_field = execute_move(field, piece, move)
+                        #if all moves led to being checked either checkmate or draw
+                        if sum(moves.values(), []) == []:
+                            if initial_check:
+                                checkmate = True
+                                break
+                            else:
+                                draw = True
+                                break
+
+                new_field = execute_move(field, piece, move).copy()
                 if not check_if_check(new_field, player):
                     field = new_field
                     break
                 else:
-                    #potential move led to being checked
-                    if player == 'w':
-                        prediction[np.argmax(prediction)] = -1
-                    moves[piece].remove(move)
-
-                    #if all moves led to being checked either checkmate or draw
-                    if sum(moves.values(), []) == []:
-                        if initial_check:
-                            checkmate = True
-                            break
-                        else:
-                            draw = True
-                            break
+                    input("got heree")
 
             if player == 'w':
                 player = 'b'
@@ -162,12 +183,16 @@ def test_model(model_name, total_games):
             else:
                 winner = 'w'
                 games[winner] += 1
+            print(winner)
         else:
+            print("draw")
             games["D"] += 1
+        input(field)
+
 
     for outcome in games.keys():
         print(f'{outcome}:')
         print(f"\t{(games[outcome]/total_games)*100:.2f}%")
 
-#create_model(500, 10)
-test_model("./models/500_random_games-model", 100)
+#create_model(200, 1)
+test_model("./models/model_500_random_games", 100)
