@@ -24,10 +24,18 @@ def move_to_vector(old_pos, new_pos):
     arr[old_pos * 64 + new_pos] = 1
     return arr
 
-def vector_to_move(array):
+def vector_to_move(arr):
     i = np.where(arr == 1)[0][0]
     new_pos = i%64
     new_pos = (new_pos//8, new_pos%8)
     old_pos = i//64
     old_pos = (old_pos//8, old_pos%8)
     return old_pos, new_pos
+
+def move_in_moves(piece, move, moves):
+    if piece not in list(moves.keys()):
+        return False
+    elif move not in moves[piece]:
+        return False
+    else:
+        return True

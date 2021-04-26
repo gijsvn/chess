@@ -12,7 +12,6 @@ def test_field():
 
     return field
 
-
 def initialize_field():
     """
     function that returns an 8 by 8 matrix of strings representing the playing field
@@ -233,31 +232,7 @@ def execute_move(field, old, new):
     """
     returns new state of playing field given certain move
     """
-    piece = field[old]
-    move = field[new]
-
     new_field = field.copy()
-    if move[1:] == 'Kin':
-        print(new_field)
-        np.save("error_field.npy", new_field)
-        print(old, new)
-        #for pawns, check if they reached end of board (and if so turn into queen)
-        if new_field[old][1] == "P":
-            if new_field[old][0] == 'w' and new[0] == 0:
-                new_field[old] = "    "
-                new_field[new] = "wQue"
-            elif new_field[old][0] == 'b' and new[0] == 7:
-                new_field[old] = "    "
-                new_field[new] = "bQue"
-            else:
-                piece = new_field[old]
-                new_field[old] = "    "
-                new_field[new] = piece
-        else:
-            piece = new_field[old]
-            new_field[old] = "    "
-            new_field[new] = piece
-        input(new_field)
 
     #for pawns, check if they reached end of board (and if so turn into queen)
     if new_field[old][1] == "P":
@@ -281,8 +256,8 @@ def clean_illegal_moves(field, player, moves):
     temp_field = field.copy()
     for piece in moves.keys():
         for move in moves[piece]:
-            temp_field = execute_move(field, piece, move)
-            if check_if_check(temp_field, player):
+            new_field = execute_move(temp_field, piece, move)
+            if check_if_check(new_field, player):
                 moves[piece].remove(move)
     return moves
 
