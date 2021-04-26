@@ -9,7 +9,6 @@ from util import *
 def generate_random_game_data(total_games):
     training_data = {'X':[], 'y':[]}
     games_appended = 0
-    turns = []
     while games_appended < total_games:
         game_memory = {'X':[], 'y':[]}
 
@@ -43,8 +42,9 @@ def generate_random_game_data(total_games):
                             draw = True
                             break
 
-            game_memory['X'].append(process_field(field))
-            game_memory['y'].append(turn)
+            if player == 'w':
+                game_memory['X'].append(process_field(field))
+                game_memory['y'].append(turn)
 
             if player == 'w':
                 player = 'b'
@@ -56,6 +56,8 @@ def generate_random_game_data(total_games):
                 checkmate = check_if_checkmate(field, player)
 
         if checkmate:
+            print(games_appended)
+            input(len(training_data['X']))
             if player == 'w':
                 winner = 'b'
                 training_data['X'] += game_memory['X']
@@ -67,11 +69,6 @@ def generate_random_game_data(total_games):
                 training_data['X'] += game_memory['X']
                 training_data['y'] += list(np.array(game_memory['y'])/turn)
                 games_appended += 1
-
-        turns.append(turn)
-        print(turn)
-    print(np.mean(turns))
-    input(np.std(turns))
 
 
         #print(f"{games_appended}/{total_games} training games", end = '\r')
@@ -194,5 +191,5 @@ def test_model(model_name, total_games):
         print(f'{outcome}:')
         print(f"\t{(games[outcome]/total_games)*100:.2f}%")
 
-#create_model(200, 1)
-test_model("./models/model_500_random_games", 100)
+create_model(500, 10)
+#test_model("./models/model_500_random_games", 100)
